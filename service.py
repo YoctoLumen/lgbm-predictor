@@ -17,7 +17,7 @@ model    = joblib.load(os.path.join(BASE_DIR, "model_lgbm", "model.pkl"))
 scaler   = joblib.load(os.path.join(BASE_DIR, "model_lgbm", "scaler.pkl"))
 features = joblib.load(os.path.join(BASE_DIR, "model_lgbm", "features.pkl"))
 
-logger.info(f"✅ Modèle, scaler et features chargés ({len(features)} features)")
+logger.info(f"Modèle, scaler et features chargés ({len(features)} features)")
 
 app = FastAPI(
     title="LightGBM Energy Consumption Predictor",
@@ -25,7 +25,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Types de propriété valides
 VALID_PROPERTY_TYPES = [
     "Warehouse",
     "Distribution Center",
@@ -36,12 +35,12 @@ VALID_PROPERTY_TYPES = [
     "Senior Care Community",
     "Mixed Use Property",
     "Medical Office",
-    "Standard"  # aucune des catégories encodées → toutes à 0
+    "Standard"  
 ]
 
 VALID_BUILDING_TYPES = [
     "Nonresidential COS",
-    "Standard"  # toutes les autres → colonne à 0
+    "Standard"  
 ]
 
 class HouseFeatures(BaseModel):
@@ -72,7 +71,6 @@ class HouseFeatures(BaseModel):
         description="Présence de vapeur : 0 ou 1"
     )]
 
-    # Validation du type de propriété
     @field_validator("primary_property_type")
     @classmethod
     def validate_property_type(cls, v):
@@ -83,7 +81,6 @@ class HouseFeatures(BaseModel):
             )
         return v
 
-    # Validation du type de bâtiment
     @field_validator("building_type")
     @classmethod
     def validate_building_type(cls, v):
@@ -94,7 +91,6 @@ class HouseFeatures(BaseModel):
             )
         return v
 
-    # Validation croisée
     @model_validator(mode="after")
     def coherence_globale(self):
         if self.square_foot < self.property_gfa_parking:
@@ -122,29 +118,21 @@ class HouseFeatures(BaseModel):
 def build_input_dataframe(feat: HouseFeatures) -> pd.DataFrame:
     """Reconstruit le DataFrame avec les 15 features attendues par le scaler"""
 
-    # Initialise toutes les colonnes à 0 avec les noms exacts du scaler
-    row = {col: 0 for col in features}  # 'features' = liste chargée depuis features.pkl
-
-    # Colonnes numériques directes (noms exacts comme dans le scaler)
+    row = {col: 0 for col in features}  
     row["Anciennetée"]        = feat.anciennete
     row["SquareFoot"]         = feat.square_foot
     row["hasGas"]             = feat.has_gas
     row["PropertyGFAParking"] = feat.property_gfa_parking
     row["hasSteam"]           = feat.has_steam
 
-    # One-hot encoding PrimaryPropertyType
     col_type = f"PrimaryPropertyType_{feat.primary_property_type}"
     if col_type in row:
         row[col_type] = 1
-
-    # One-hot encoding BuildingType
     col_building = f"BuildingType_{feat.building_type}"
     if col_building in row:
         row[col_building] = 1
-
-    # Création du DataFrame avec colonnes en string
     df = pd.DataFrame([row])
-    df.columns = df.columns.astype(str)  # ← correction du bug
+    df.columns = df.columns.astype(str)  
 
     logger.info(f"Colonnes : {list(df.columns)}")
     logger.info(f"Valeurs  : {df.values}")
@@ -154,7 +142,7 @@ def build_input_dataframe(feat: HouseFeatures) -> pd.DataFrame:
 
 @app.get("/")
 def root():
-    return {"message": "API LightGBM opérationnelle ✅"}
+    return {"message": "API LightGBM opérationnelle"}
 
 @app.get("/health")
 def health():
@@ -168,14 +156,9 @@ def health():
 @app.post("/predict")
 def predict(feat: HouseFeatures):
     try:
-        # Construction du DataFrame avec les 15 features
         input_df = build_input_dataframe(feat)
         logger.info(f"Input DataFrame :\n{input_df}")
-
-        # Scaling
         input_scaled = scaler.transform(input_df)
-
-        # Prédiction
         log_pred = model.predict(input_scaled)
         EUIWN = float(np.exp(log_pred[0]))
 
