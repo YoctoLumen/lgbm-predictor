@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 model    = joblib.load(os.path.join(BASE_DIR, "model_lgbm", "model.pkl"))
+model_co2   = joblib.load("model_lgbm/model_co2.pkl")
 scaler   = joblib.load(os.path.join(BASE_DIR, "model_lgbm", "scaler.pkl"))
 features = joblib.load(os.path.join(BASE_DIR, "model_lgbm", "features.pkl"))
 
@@ -148,7 +149,7 @@ def root():
 def health():
     return {
         "status": "healthy",
-        "model": "LightGBM",
+        "models": ["LightGBM Energy", "LightGBM CO2"],
         "nb_features": len(features),
         "features": features
     }
@@ -160,10 +161,12 @@ def predict(feat: HouseFeatures):
         logger.info(f"Input DataFrame :\n{input_df}")
         input_scaled = scaler.transform(input_df)
         log_pred = model.predict(input_scaled)
+        log_pred_co2 = model_co2.predict(input_scaled)
         EUIWN = float(np.exp(log_pred[0]))
-
+        CO2 = float(np.exp(log_pred_co2[0]))
         return {
             "SiteEUIWN(kBtu/sf)": round(EUIWN, 2),
+            "CO2Emissions(kg/sf)"     : round(CO2, 2),
             "input": feat.model_dump()
         }
 
