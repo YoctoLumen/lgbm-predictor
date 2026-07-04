@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-model    = joblib.load(os.path.join(BASE_DIR, "model_lgbm", "model.pkl"))
+model    = joblib.load(os.path.join(BASE_DIR, "model_lgbm", "model_energy.pkl"))
 model_co2 = joblib.load(os.path.join(BASE_DIR, "model_lgbm", "model_co2.pkl"))
 scaler   = joblib.load(os.path.join(BASE_DIR, "model_lgbm", "scaler.pkl"))
 features = joblib.load(os.path.join(BASE_DIR, "model_lgbm", "features.pkl"))
